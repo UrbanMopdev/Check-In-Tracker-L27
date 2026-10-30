@@ -16,7 +16,8 @@ def send_record(url, record):
         log.error('Kustomer send failed for booking %s: %s', record.get('ID'), exc)
         return False
     if 200 <= response.status_code < 300:
-        log.info('Sent booking %s to Kustomer (%s): %s', record.get('ID'), response.status_code, record['event_type'])
+        log.info('Sent booking %s to Kustomer (%s): %s', record.get('ID'), response.status_code,
+                 record.get('event_type') or record.get('Warning Type'))
         return True
     log.error('Kustomer rejected booking %s: %s %s', record.get('ID'), response.status_code, response.text[:300])
     return False

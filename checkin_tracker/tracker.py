@@ -5,6 +5,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from checkin_tracker import kustomer
+from checkin_tracker.late import send_late_warnings
 from checkin_tracker.launch27 import Launch27Client
 from checkin_tracker.parse import TRACKED_FIELDS, parse_bookings
 
@@ -69,7 +70,14 @@ def run_once(settings, client=None, send=kustomer.send_record):
     """One poll: fetch today's bookings, detect changes, send them, save the new snapshot."""
     client = client or _client(settings)
     today = _today(settings)
-    records = parse_bookings(client.get_bookings(today), settings.timezone)
+    bookings = client.get_bookings(today)
+    records = parse_bookings(bookings, settings.timezone)
+
+    if settings.kustomer_late_webhook_url:
+        try:
+            send_late_warnings(settings, bookings, records, today, send)
+        except Exception:
+            log.exception('Late check-in warnings failed')
 
     previous = load_snapshot(settings.snapshot_file)
     snapshot = {str(r['ID']): _tracked(r) for r in records}

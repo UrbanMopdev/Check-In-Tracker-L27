@@ -17,6 +17,19 @@ are the same, so the existing Kustomer workflow keeps working.
 5. Send each changed booking to Kustomer. If a send fails, the booking keeps its old snapshot,
    so the change is sent again on the next poll.
 
+**Late check-in warnings.** If `KUSTOMER_LATE_WEBHOOK_URL` is set, each poll also looks for
+bookings whose cleaner has neither started driving nor checked in as the arrival window runs out.
+It sends the booking to that hook with a `Warning Type` field, which the Kustomer
+"vps-lack-of-check-in-warning" workflow branches on:
+
+| Warning Type | Sent when | What the Kustomer workflow does |
+| --- | --- | --- |
+| `Half Arrival Window/ 30 Minutes` | 30 min before the arrival window ends | SMS to the cleaner (if their profile allows SMS) |
+| `15 Minutes` | 15 min before the arrival window ends | Task on the cleaner's profile for the operations team |
+
+Each warning goes out at most once per booking per day. Nothing is sent once the window has
+ended, and cancelled or unassigned bookings are skipped.
+
 A booking seen for the first time only sets its baseline and is not sent, the same as the
 original. The very first run only saves a baseline.
 
@@ -95,6 +108,8 @@ CRON_TZ=America/New_York
 | `POLL_SECONDS` | | `60` | `--loop` only |
 | `STATE_DIR` | | `./state` | Cached token and last snapshot |
 | `DRY_RUN` | | `false` | Log changes without sending |
+| `KUSTOMER_LATE_WEBHOOK_URL` | | | Hook for late check-in warnings; empty = off |
+| `LATE_WARNINGS_DRY_RUN` | | `true` | Log late warnings without sending |
 
 Settings come from the environment. A `.env` file in the project root is also read.
 

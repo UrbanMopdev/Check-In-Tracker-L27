@@ -34,6 +34,8 @@ class Settings:
     active_hours: tuple
     poll_seconds: int
     dry_run: bool
+    kustomer_late_webhook_url: str = ''
+    late_dry_run: bool = True
 
     @property
     def token_file(self):
@@ -42,6 +44,10 @@ class Settings:
     @property
     def snapshot_file(self):
         return self.state_dir / 'last_snapshot.json'
+
+    @property
+    def late_sent_file(self):
+        return self.state_dir / 'late_warnings_sent.json'
 
 
 def load_settings():
@@ -67,4 +73,6 @@ def load_settings():
         active_hours=_active_hours(os.environ.get('ACTIVE_HOURS', '7-23')),
         poll_seconds=int(os.environ.get('POLL_SECONDS', '60')),
         dry_run=dry_run,
+        kustomer_late_webhook_url=os.environ.get('KUSTOMER_LATE_WEBHOOK_URL', ''),
+        late_dry_run=os.environ.get('LATE_WARNINGS_DRY_RUN', 'true').lower() in ('1', 'true', 'yes'),
     )
