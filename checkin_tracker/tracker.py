@@ -46,12 +46,29 @@ def find_changes(records, previous):
     return changed
 
 
+def _client(settings):
+    return Launch27Client(settings.l27_base_url, settings.l27_email, settings.l27_password, settings.token_file)
+
+
+def _today(settings):
+    return datetime.now(ZoneInfo(settings.timezone)).strftime('%Y-%m-%d')
+
+
+def resend(settings, booking_id, event_type, client=None, send=kustomer.send_record):
+    """Manually send one of today's bookings to Kustomer as `event_type`. Leaves the snapshot alone."""
+    client = client or _client(settings)
+    records = parse_bookings(client.get_bookings(_today(settings)), settings.timezone)
+    matches = [r for r in records if str(r['ID']) == str(booking_id)]
+    if not matches:
+        log.error('Booking %s is not in today\'s bookings', booking_id)
+        return False
+    return send(settings.kustomer_webhook_url, {**matches[0], 'event_type': event_type})
+
+
 def run_once(settings, client=None, send=kustomer.send_record):
     """One poll: fetch today's bookings, detect changes, send them, save the new snapshot."""
-    client = client or Launch27Client(
-        settings.l27_base_url, settings.l27_email, settings.l27_password, settings.token_file
-    )
-    today = datetime.now(ZoneInfo(settings.timezone)).strftime('%Y-%m-%d')
+    client = client or _client(settings)
+    today = _today(settings)
     records = parse_bookings(client.get_bookings(today), settings.timezone)
 
     previous = load_snapshot(settings.snapshot_file)

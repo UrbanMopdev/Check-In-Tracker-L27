@@ -7,7 +7,7 @@ import pytest
 
 from checkin_tracker.config import Settings
 from checkin_tracker.parse import parse_booking, to_local
-from checkin_tracker.tracker import load_snapshot, run_once
+from checkin_tracker.tracker import load_snapshot, resend, run_once
 
 NY = ZoneInfo('America/New_York')
 
@@ -144,3 +144,12 @@ def test_dry_run_does_not_send(settings):
 
     changes = run_once(replace(settings, dry_run=True), FakeClient([checked_in(BOOKING, '2024-08-25T17:55:00Z')]), boom)
     assert len(changes) == 1
+
+
+def test_resend_sends_one_booking_without_touching_snapshot(settings):
+    sent = []
+    send = lambda url, r: sent.append(r) or True
+    assert resend(settings, '101', 'Checked_In', FakeClient([BOOKING]), send)
+    assert [(r['ID'], r['event_type']) for r in sent] == [(101, 'Checked_In')]
+    assert load_snapshot(settings.snapshot_file) is None
+    assert not resend(settings, '999', 'Checked_In', FakeClient([BOOKING]), send)

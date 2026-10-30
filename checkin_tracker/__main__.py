@@ -2,6 +2,7 @@
 
     python -m checkin_tracker          # one poll (for cron)
     python -m checkin_tracker --loop   # poll every POLL_SECONDS during ACTIVE_HOURS (for a worker/service)
+    python -m checkin_tracker --resend 129026 --event Checked_In   # manually send one of today's bookings
 """
 import argparse
 import logging
@@ -11,7 +12,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from checkin_tracker.config import load_settings
-from checkin_tracker.tracker import run_once
+from checkin_tracker.tracker import resend, run_once
 
 log = logging.getLogger('checkin_tracker')
 
@@ -24,6 +25,8 @@ def in_active_hours(settings):
 def main(argv=None):
     parser = argparse.ArgumentParser(prog='checkin_tracker')
     parser.add_argument('--loop', action='store_true', help='keep polling instead of running once')
+    parser.add_argument('--resend', metavar='BOOKING_ID', help="send one of today's bookings to Kustomer now")
+    parser.add_argument('--event', default='Checked_In', help='event_type for --resend (default: Checked_In)')
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -32,6 +35,9 @@ def main(argv=None):
         stream=sys.stdout,
     )
     settings = load_settings()
+
+    if args.resend:
+        return 0 if resend(settings, args.resend, args.event) else 1
 
     if not args.loop:
         try:
